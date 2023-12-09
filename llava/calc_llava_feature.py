@@ -1,11 +1,14 @@
 import os, torch
 
-from llava.model.builder import load_pretrained_model
-from llava.mm_utils import get_model_name_from_path
-from llava.eval.run_llava import eval_model
+from LLaVA.llava.model.builder import load_pretrained_model
+from LLaVA.llava.mm_utils import get_model_name_from_path
+from LLaVA.llava.eval.run_llava import eval_model
+from LLaVA.llava.utils import disable_torch_init
+from LLaVA.llava.mm_utils import process_images
 
-model_path = "/root/LLaVA/llava-v1.5-13b"
 
+model_path = "/root/LLaVA_backup/ShareGPT4V-7B"
+disable_torch_init()
 tokenizer, model, image_processor, context_len = load_pretrained_model(
     model_path=model_path,
     model_base=None,
@@ -37,11 +40,9 @@ def load_image_dict(image_dict_path):
         raise FileNotFoundError("Image dict not found, which should be a url or path to a pkl file.")
     return image_dict
 
-from llava.mm_utils import process_images
 
 
-
-def calulate_clip_scores(image_dict, device="cuda:1"):
+def calulate_clip_scores(image_dict, device="cuda:0"):
     score_dict = {}
     
     batch_size = 16
@@ -84,7 +85,7 @@ def calulate_clip_scores(image_dict, device="cuda:1"):
         with torch.inference_mode():
             image_features = model.encode_images(image_tensor)
         for i, key in enumerate(keys):
-            score_dict[key] = image_features.cpu().numpy()
+            score_dict[key] = image_features[i].unsqueeze(0).cpu().numpy()
         
     return score_dict
 
@@ -93,7 +94,7 @@ if __name__ == "__main__":
     image_dict_path = "/root/RAVLM/knowledge_base/cathedral_image_subset.pkl"
     image_dict = load_image_dict(image_dict_path)
     score_dict = calulate_clip_scores(image_dict)
-    with open("/root/RAVLM/knowledge_base/cathedral_image_feature_llava.pkl", "wb") as f:
+    with open("/root/RAVLM/knowledge_base/cathedral_image_feature_llava_no_proj.pkl", "wb") as f:
         pickle.dump(score_dict, f)
 
 
